@@ -1,0 +1,252 @@
+---
+title: "Imprinting"
+output: md_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Imprinting is a biological feature where a only one allele is expressed for a gene, which is dependent on its parental origin. This allele-specific expression is regulated by allele-specific DNA methylation. 
+
+Most imprinted genes are ubiquitous, the allele-specificity of expression and DNA methylation is observed in all tissues. However, the placenta also expresses many genes in an allele-specific parental-origin dependent manner. This indicates that imprinting in the placenta serves important roles to it's function, which is not surprising, given that with respect to evolution, imprinting and placentation evolved at the same time.
+
+Many studies have characterized imprinting using expression technology (e.g. RNAseq) and DNA methylation. These studies have accumulated evidence for the existence of many imprints. However, there is lacking a universal reference for human imprinted genes and regions.
+
+Here, I try to compile the evidence for all detected human imprinted regions. My goal is to create a hg19 reference that contains the coordinates for imprinted regions that are 1) ubiquitously expressed in all / most tissues, and 2) specific to the placenta.  
+
+For each publication, I had to do some extra work to obtain the necessary information on the imprinted regions. I describe this extra processing in each section. But briefly, I had to do things like: figure out which regions were confirmed to be allelically-methylated, figure out which are placental-specific or not.
+
+```{r message = FALSE, warning = FALSE, include = FALSE}
+library(tidyverse)
+library(readxl)
+library(fuzzyjoin)
+```
+
+# Primary Publications
+
+There are many studies that have looked at specific imprinted regions and genes. Here, I briefly describe the most comprehensive studies that have been done to date. Most of these have used some sort of next-generation sequencing technology in combination with high density microarrays to measure DNA methylation and sometimes transcription.
+
+## Hanna et al 2016
+
+**Genome Build:** hg19
+**Tissues used:** Placenta, Germ cells
+**Technology:** 450k Array
+**Approach to determine parental origin:** DMR analysis of triploid (diandric vs digynic) conceptions overlapping with DMRs between oocyte and sperm
+**Findings:** Imprinted regions identified for known genes. Novel imprinted regions too. Polymorphic placental-specific imprinting. Some Court et al 2014 DMRs were not reproduced, and did not show germline differences in methylation.
+**Number of DMRs:**  43 somatic imprinted DMRs in the placenta that overlapped to Court et al. 2014. 10 of which may be secondary DMRs (no germline differences). 101 novel maternal germline imprinted DMRs, 72 are placenta specific.
+
+At this point > 140 maternal imprinted DMRs in placenta.
+
+limitation is small sample numbers, discovery in 450k CpGs, so there are likely many more DMRs.
+
+> Germline novel DMRs were those that were CGIs (defined by UCSC Genome Browser [https://genome.ucsc.edu/]) that (1) were >50% differentially methylated between sperm and oocytes, (2) were intermediately methylated (15%–60%, based on the 90th percentile observed at known imprinted DMRs) in the blastocyst (average of ICM and TE), (3) showed a >5% difference in methylation between diandric and digynic triploids, and (4) showed matching parental origin of DNA methylation between triploid villi and gametes. Placental-specific DMRs were defined as those with >25% and <75% DNA methylation in placenta and <25% in somatic tissues.
+
+```{r}
+hanna_all <- read_excel(here::here('processed', 'Hanna_processed.xlsx'), skip = 1, sheet = 1) %>%
+  janitor::clean_names()
+hanna_all
+
+hanna_pl <- read_excel(here::here('processed', 'Hanna_processed.xlsx'), skip = 1, sheet = 2) %>%
+  janitor::clean_names()
+hanna_pl
+
+hanna_all %>%
+  mutate(placental_specific = closest_tss %in% hanna_pl$dmr_id,
+         known_dmr = court_et_al_2014_dmr != 'NA') %>%
+  count(known_dmr, placental_specific)
+
+hanna_final <- hanna_all %>%
+  mutate(placental_specific = closest_tss %in% hanna_pl$dmr_id,
+         known_dmr = court_et_al_2014_dmr != 'NA') 
+
+hanna_final[hanna_final == 'NA'] <- NA
+```
+
+Note, of 101 novel imprinted DMRs, 72 are placental specific. These are not indicated in s2, but were used for the DAVID analysis  in s6. Also, coordinates from s6 do not correspond exactly to s2. In most cases, there are a couple 100 bp differences maximum. I'm not sure exactly but I suspect that s6 is the coordinates of the main isoform/transcript instead of the DMR. I use all coordinates from s2. 
+
+```{r eval = F}
+hanna_final %>%
+  write_tsv(here::here('processed', 'hanna_final.tsv'))
+```
+**definition of placental-specific:** 
+> Seventy-two novel DMRs showed a placental-specific pattern of imprinting, defined as <25% or >75% methylation in somatic tissues and intermediately (25%–75%) methylated in placenta.
+
+Where somatic tissues are fetal brain, spinal cord, kidney, muscle, and adult blood.
+
+## Court et al 2014
+
+**Tissues:** Placenta, Normal human tissues
+**Technology:** WGBSEQ, 450k
+**Approach to determine parental origin:** UPDs and hydatidiform moles.
+**Findings:** Imprinted regions for all known imprinted genes. 21 novel loci.
+
+Limitation discovery in 450k CpGs (intersected with wgBSeq).
+
+It appears that all relevant data on the confirmed regions is in table 1, and not in the supplementals, which are terribly terribly annotated.
+
+```{r}
+court_ubi <- read_excel(here::here('processed','Court_processed.xlsx'), sheet = 1)
+court_pl <- read_excel(here::here('processed','Court_processed.xlsx'), sheet = 2)
+
+court <- court_ubi %>% mutate(type = 'ubiquitous') %>%
+  bind_rows(court_pl %>% mutate(type = 'placental-specific')) %>%
+  janitor::clean_names() %>%
+  select(chr, start, finish, type, known_dmr, known_imprinting_loci, everything()) %>%
+  dplyr::rename(end = finish, number_450k_probes = number_infinium_probes, 
+                methylated_allele = methylation_origin)
+```
+
+```{r eval = F}
+court %>%
+  write_tsv(here::here('processed', 'court_final.tsv'))
+```
+
+## Sanchez-Delgado et al 2016
+
+**Genome build:** hg19
+**Tissues:** germ cells, blastocysts, placenta, various somatic tissues
+**Technology:** Methylseq
+**Approach:** Identified intermediately methylated PL regions, that are also DMRs in germ cells. Validated with allele-specific assays in 11% of 551 identified regions.
+**Findings:** Sometimes imprinted DMRs  do not result in imprinted expression, confirm derived imprinted methylation is maternal/pat with usage of germ cells methylation data.
+**Number of DMRs:** Verified Hanna and Court 150 maternally methylated placental-specific DMRs (previously idetnfieid). 551 additional novel DMRs candidates. Only 11% were verified to be monoallelically methylated (all maternal).
+
+Table S2 has a list of regions. They list all candidate 551 maternal gDMRs. 11% of these were confirmed to be mono-allelic methylated. These are not indicated in table S2, but are indicated in table S3. I need table S2 for coordinates of the DMRs.
+
+Table S3 needs to get processed further. I notice that the sample numbers are really small. It's not convincing that these DMRs are imprinted.
+
+We filter to DMRs with "enough" evidence to support their status:
+
+- number of informative cases is greater or equal to  3
+
+After that, we can define impritning as,
+
+- maternall methylated when # of maternal = n_all
+- polymorphic when n maternally methylated < n_all
+
+**Note** that they do not provide coordinates for the verified DMRs in table S3. Therefore, I have to merge S2 and S3 based on the only column in common, "Gene". And note that the "Gene" column in table S3 contains non-specific information such as "Chr18" and "Chr1"???. As expected, many of these cannot be merged into table S2 and will just be dropped from the analysis.. 
+
+```{r}
+sandel_candidates <- read_excel(here::here('processed', 'Sanchez_Delgado_processed.xlsx'), sheet = 1)
+sandel_confirmed <- read_excel(here::here('processed', 'Sanchez_Delgado_processed.xlsx'), sheet = 2)
+
+sandel_confirmed <- sandel_confirmed %>% 
+  # extract evidence for imprinting
+  dplyr::rename(description = names(.)[2]) %>%
+  mutate(n_mat_methylated = str_extract(description, '[0-9](?= mat)') %>% as.numeric(),
+         n_pat_methylated =  str_extract(description, '[0-9](?= pat)') %>% as.numeric(),
+         n_bi_methylated =  str_extract(description, '[0-9](?= biall)') %>% as.numeric()) %>%
+  rowwise() %>%
+  mutate(n_all = sum(n_mat_methylated, n_pat_methylated, n_bi_methylated, na.rm = T)) %>%
+  ungroup() %>%
+  
+  # filter to where there are enough cases to make an inference about status
+  filter(n_all > 1) %>%
+  
+  mutate(status = case_when(
+    n_mat_methylated == n_all ~ 'Maternal',
+    n_bi_methylated > 0  & n_mat_methylated > 0~ 'Polymorphic',
+  ))
+
+sandel_confirmed 
+
+sandel_confirmed <- sandel_confirmed %>% 
+  mutate(methylated_allele = if_else(n_bi_methylated == n_all, 'bi', 'm', missing = 'm'),
+         percent_biallelic = n_bi_methylated*100 / n_all) %>%
+  select(Gene, methylated_allele, percent_biallelic, n_all) %>%
+  dplyr::rename(n_used_to_verify_allele_specific_methylation = n_all) %>%
+  
+  # remove 100% biallelic
+  filter(methylated_allele != 'bi')
+sandel_confirmed
+```
+
+column `n_used_to_verify_allele_specific_methylation` is the # of samples used to verify allele specific methylation.
+column `percent_biallelic` is the percentage of samples that show biallelic methylation. If > 0, indicates polymorphic.
+
+```{r}
+# Which in s3 are not found in table s2
+sandel_confirmed$Gene %in% sandel_candidates$Gene
+sandel_confirmed %>%
+  filter(!Gene %in% sandel_candidates$Gene)
+
+
+# join based on "Gene"
+sandel <- sandel_candidates %>%
+  fuzzyjoin::regex_right_join(sandel_confirmed, by = 'Gene') %>%
+  select(contains('.x'), contains('.y'), everything())  %>%
+  
+  # remove s3 entries with no match in s2
+  filter(!is.na(Gene.x)) %>%
+  dplyr::rename(gene = Gene.y) %>%
+  select(-Gene.x) %>%
+  
+  janitor::clean_names() %>%
+  rename(chr = chromosome, cpg_island = cp_g_island, cpg_n =cp_gn)
+
+sandel
+```
+
+```{r eval = F}
+sandel %>%
+  write_tsv(here::here('processed', 'sanchez_delgado_final.tsv'))
+```
+
+## Hamada 2016 
+
+**Genome Build:** hg19
+**Tissues:** Placenta, Cytotrophoblasts, germ cells, blood, stromal from CV
+**Technology:** WGBSEQ, RNAseq
+**Approach:** Determine allele-specific meth/rna via sequencing in Cyto. Supported by germ cell DMR analysis.
+**Findings:** 440 confirmed maternally methylated primary imprinted DMRs (mDMRs). Out of 101 mDMRs that Courtney identified, 31 were tested in this study, and 25 of those were confirmed. An advantage of this study over previous is they used entirely wgBSEQ -> they suggest there are around 1800 imprinted DMRs based on their results.
+
+Limitation is discovery was an N of 1. (Candidates were followed up with more samples in a targeted approach). Suggests a proportion of DMRs are not placental-specific.
+
+```{r}
+hamada_s3 <- read_excel(here::here('raw files', 'Hamada 2016 s3.xlsx'))
+hamada_s4 <- read_excel(here::here('raw files', 'Hamada 2016 s4.xlsx'))
+
+# remove data columns
+hamada_s3 <- hamada_s3 %>%
+  select(Classification:`Ranking according to mean [M-P]`) %>%
+  mutate(Trimester = 'First')
+hamada_s4 <- hamada_s4 %>%
+  select(Classification:`Ranking according to mean [M-P]`) %>%
+  mutate(Trimester = 'Second/Term')
+
+hamada <- bind_rows(hamada_s3, hamada_s4) %>%
+  janitor::clean_names()
+```
+
+Filter to significant DMRs, as defined in source:
+
+> We defined candidate mDMRs or pDMRs showing >30% or <-30% mean [M - P] levels and statistically significant allelic methylation differences (BH-corrected p < 0.05, Student’s t test) as confirmed gDMRs.
+
+```{r}
+hamada %>%
+  count(trimester, classification) # 797 and 449 for 1st vs term/2nd
+
+hamada %>%
+  filter(corrected_p_value < 0.05, abs(mean_m_p_percent) >= 30) %>%
+  count(trimester, classification)
+
+
+hamada <- hamada %>%
+  filter(corrected_p_value < 0.05, abs(mean_m_p_percent) >= 30) 
+```
+
+```{r eval = F}
+hamada %>%
+  write_tsv(here::here('processed', 'hamada_final.tsv'))
+```
+
+# Terminology
+
+| Term | Definition | 
+| :--- | :--- |
+| DMR | Sometimes imprinted regions characterized by allele-specific methylation are referred to as differentially methylated regions (DMR), where differential methylation refers to the opposite methylation states of the parental alleles | mDMR | maternally methylated DMR. An Imprinted region where the maternal allele is methylated. Most placental imprints have the maternal allele methylated. |
+
+
+# Merge
+
+```{r}
+
+```

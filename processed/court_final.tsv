@@ -1,0 +1,68 @@
+chr	start	end	type	known_dmr	known_imprinting_loci	gene_locus	number_450k_probes	gc_content	number_cp_g	methylated_allele
+1	68515433	68517545	ubiquitous	Known	Known	DIRAS3	17	0.5	88	M
+2	207114583	207136544	ubiquitous	Known	Known	ZDBF2	8	0.45	439	P
+4	89618184	89619237	ubiquitous	Known	Known	NAP1L5	15	0.57	57	M
+6	3849082	3850359	ubiquitous	Known	Known	FAM50B	25	0.65	90	M
+6	144328078	144329888	ubiquitous	Known	Known	PLAGL1	16	0.58	143	M
+6	160426558	160427561	ubiquitous	Known	Known	IGF2R	2	0.7	74	M
+7	50848726	50851312	ubiquitous	Known	Known	GRB10	9	0.6	171	M
+7	94285537	94287960	ubiquitous	Known	Known	PEG10	53	0.6	119	M
+7	130130122	130134388	ubiquitous	Known	Known	MEST	55	0.54	226	M
+8	141108147	141111081	ubiquitous	Known	Known	TRAPPC9	8	0.62	193	M
+10	121578046	121578727	ubiquitous	Known	Known	INPP5F	4	0.59	52	M
+11	2018812	2024740	ubiquitous	Known	Known	H19	48	0.6	250	P
+11	2153991	2155112	ubiquitous	Known	Known	IGF2 DMR2	9	0.65	63	P
+11	2168333	2169768	ubiquitous	Known	Known	IGF2 DMR0	1	0.62	33	P
+11	2719948	2722259	ubiquitous	Known	Known	KvDMR1	30	0.67	192	M
+13	48892341	48895763	ubiquitous	Known	Known	RB1	12	0.59	195	M
+14	101275427	101278058	ubiquitous	Known	Known	IG-DMR	0	0.52	64	P
+14	101290524	101293978	ubiquitous	Known	Known	MEG3	33	0.6	188	P
+15	23807086	23812495	ubiquitous	Known	Known	MKRN3/MIR4508	12	0.44	109	M
+15	23892425	23894029	ubiquitous	Known	Known	MAGEL2	6	0.55	51	M
+15	23931451	23932759	ubiquitous	Known	Known	NDN	8	0.65	108	M
+15	25068564	25069481	ubiquitous	Known	Known	SNRPN	8	0.42	19	M
+15	25093008	25093829	ubiquitous	Known	Known	SNRPN	4	0.49	44	M
+15	25123027	25123905	ubiquitous	Known	Known	SNRPN	5	0.47	45	M
+15	25200004	25201976	ubiquitous	Known	Known	SNURF	7	0.6	113	M
+15	99408496	99409650	ubiquitous	Known	Known	IGF1R	7	0.51	55	M
+16	3492828	3494463	ubiquitous	Known	Known	ZNF597/NAA60	11	0.54	76	P
+19	54040510	54042212	ubiquitous	Known	Known	ZNF331	11	0.64	125	M
+19	57348493	57353271	ubiquitous	Known	Known	PEG3	36	0.59	221	M
+20	30134663	30135933	ubiquitous	Known	Known	MCTS2P/HM13	9	0.48	47	M
+20	36148604	36150528	ubiquitous	Known	Known	BLCAP/NNAT	35	0.55	135	M
+20	42142365	42144040	ubiquitous	Known	Known	L3MBTL	25	0.65	84	M
+20	57414039	57418612	ubiquitous	Known	Known	GNAS	23	0.57	257	P
+20	57425649	57428033	ubiquitous	Known	Known	NESP-AS/GNAS-AS1	62	0.61	128	M
+20	57428905	57431463	ubiquitous	Known	Known	GNAS XL	6	0.65	200	M
+20	57463265	57465201	ubiquitous	Known	Known	GNAS Ex1A	38	0.67	198	M
+1	68512505	68513486	ubiquitous	Novel	Known	DIRAS3 Ex2	8	0.52	39	M
+14	101370741	101371419	ubiquitous	Novel	Known	MEG8	1	0.66	43	M
+15	24346736	24347142	ubiquitous	Novel	Known	SNRPN intragenic CpG32	1	0.59	30	M
+15	24671872	24672679	ubiquitous	Novel	Known	SNRPN intragenic CpG29	4	0.59	39	M
+15	24722753	24723071	ubiquitous	Novel	Known	SNRPN intragenic CpG30	1	0.66	29	M
+15	25017924	25018886	ubiquitous	Novel	Known	SNRPN intragenic CpG40	4	0.51	67	M
+16	3481801	3482388	ubiquitous	Novel	Known	ZNF597	2	0.54	29	M
+19	54057086	54058425	ubiquitous	Novel	Known	ZNF331	4	0.66	102	M
+1	40024626	40025540	ubiquitous	Novel	Novel	PPIEL	4	0.54	39	M
+6	170054504	170055618	ubiquitous	Novel	Novel	WDR27	2	0.56	58	M
+7	154862719	154863382	ubiquitous	Novel	Novel	HTR5A	6	0.62	55	M
+8	37604992	37606088	ubiquitous	Novel	Novel	CXORF56 pseudogene/ERLIN2	7	0.45	37	M
+21	40757510	40758276	ubiquitous	Novel	Novel	WRB	4	0.61	43	M
+22	42077774	42078873	ubiquitous	Novel	Novel	NHP2L1	8	0.54	63	M
+2	207066967	207069445	placental-specific	Novel	NA	GPR1-AS	3	0.49	86	M
+3	182815725	182817627	placental-specific	Novel	NA	MCCC1	13	0.54	94	M
+5	58333774	58336554	placental-specific	Novel	NA	PDE4D	7	0.54	145	M
+6	105400631	105402559	placental-specific	Novel	NA	LIN28B	8	0.45	62	M
+6	106957945	106961974	placental-specific	Novel	NA	AIM1	19	0.54	203	M
+7	134671024	134672011	placental-specific	Novel	NA	AGBL3	12	0.59	74	M
+8	135707227	135710114	placental-specific	Novel	NA	ZFAT	3	0.6	111	M
+9	4297279	4300182	placental-specific	Novel	NA	GLIS3	9	0.63	235	M
+9	37800140	37802937	placental-specific	Novel	NA	DCAF10	5	0.56	157	M
+10	128993405	128995242	placental-specific	Novel	NA	FAM196A/DOCK1	10	0.72	198	M
+11	109962727	109964784	placental-specific	Novel	NA	ZC3H12C	9	0.66	198	M
+13	33000694	33002448	placental-specific	Novel	NA	N4BP2L1	13	0.66	136	M
+15	93614998	93616859	placental-specific	Novel	NA	RGMA	8	0.61	134	M
+17	66596155	66597643	placental-specific	Novel	NA	FAM20A	4	0.72	162	M
+18	32956510	32957580	placental-specific	Novel	NA	ZNF396	9	0.64	86	M
+19	54150515	54155608	placental-specific	Known	Known	MIR512-1 cluster	6	0.53	216	M
+19	10303506	10306415	placental-specific	Known	Known	DNMT1	10	0.55	129	M
