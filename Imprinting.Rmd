@@ -3,7 +3,7 @@ title: "Imprinting"
 output:
   html_document:
     toc: true
-    toc_depth: 2
+    toc_depth: 3
     toc_float:
       collapsed: false
     theme: spacelab
@@ -18,9 +18,9 @@ Most imprinted genes are ubiquitous, the allele-specificity of expression and DN
 
 Many studies have characterized imprinting using expression technology (e.g. RNAseq) and DNA methylation. These studies have accumulated evidence for the existence of many imprints. However, there is lacking a universal reference for human imprinted genes and regions.
 
-Here, I try to compile the evidence for all detected human imprinted regions. My goal is to create a hg19 reference that contains the coordinates for imprinted regions that are 1) ubiquitously expressed in all / most tissues, and 2) specific to the placenta.  
+Here, I try to compile the evidence for all detected human imprinted regions. My goal is to create a hg19 reference that contains the coordinates for imprinted regions that are 1) expressed in one or more somatic tissues, and 2) specific to the placenta.  
 
-For each publication, I had to do some extra work to obtain the necessary information on the imprinted regions. I describe this extra processing in each section. But briefly, I had to do things like: figure out which regions were confirmed to be allelically-methylated, figure out which are placental-specific or not.
+For each publication, I had to do some extra work to obtain the necessary information on the imprinted regions. I describe this extra processing in each section. I had to do things like: figure out which regions were confirmed to be allelically-methylated, figure out which are placental-specific or not.
 
 ```{r message = FALSE, warning = FALSE, include = FALSE}
 library(tidyverse)
@@ -106,7 +106,7 @@ It appears that all relevant data on the confirmed regions is in table 1, and no
 court_ubi <- read_excel(here::here('processed','Court_processed.xlsx'), sheet = 1)
 court_pl <- read_excel(here::here('processed','Court_processed.xlsx'), sheet = 2)
 
-court <- court_ubi %>% mutate(type = 'ubiquitous') %>%
+court <- court_ubi %>% mutate(type = 'other') %>%
   bind_rows(court_pl %>% mutate(type = 'placental-specific')) %>%
   janitor::clean_names() %>%
   select(chr, start, finish, type, known_dmr, known_imprinting_loci, everything()) %>%
@@ -173,7 +173,7 @@ sandel_confirmed <- sandel_confirmed %>%
 sandel_confirmed 
 
 sandel_confirmed <- sandel_confirmed %>% 
-  mutate(methylated_allele = if_else(n_bi_methylated == n_all, 'bi', 'm', missing = 'm'),
+  mutate(methylated_allele = if_else(n_bi_methylated == n_all, 'bi', 'M', missing = 'M'),
          percent_biallelic = n_bi_methylated*100 / n_all) %>%
   select(Gene, methylated_allele, percent_biallelic, n_all) %>%
   dplyr::rename(n_used_to_verify_allele_specific_methylation = n_all) %>%
@@ -259,12 +259,34 @@ hamada %>%
 
 hamada <- hamada %>%
   filter(corrected_p_value < 0.05, abs(mean_m_p_percent) >= 30) 
+
+hamada
 ```
+
+Note that these are just candidate impritned regions because they show > 30% difference between oocyte and sperm. **The 440 regions that were validated using ASM assays are not indicated in any supplemental tables!** Therefore I cannot use this reference to add novel imprinted regions. However, what I can do is add an indicator if one of these candidate regions overlaps another source's regions, which would be supportive evidence for that DMR.
+
 
 ```{r eval = F}
 hamada %>%
   write_tsv(here::here('processed', 'hamada_final.tsv'))
 ```
+
+## Zink et al 2018
+
+**Genome build:** hg38
+
+**Tissues:** adult blood
+
+**Technology:** WGBSEQ, RNAseq, genotyping arrays
+
+**Findings:** 229 imprinted regions. Most localized to Chr15. Some polymorphic. Some with parent-allele-specific snp effect.
+
+```{r}
+zink_s1 <- read_excel(here::here('raw files', 'Zink 2018.xlsx'), sheet = 2, skip = 2) %>%
+  dplyr::rename(chr = Chrom, start = peakStart, end = peakEnd)
+```
+
+This table looks fine to leave as is
 
 # Terminology
 
@@ -317,7 +339,7 @@ hanna_final_merge <- hanna_final %>%
   mutate(chr = str_extract(chr, '(?<=chr).*') %>% factor(levels = c(1:22, 'X')),
          start = as.numeric(start),
          end = as.numeric(end),
-         tissue_specificity = if_else(placental_specific, 'placental-specific', 'ubiquitous'),
+         tissue_specificity = if_else(placental_specific, 'placental-specific', 'other'),
          hanna = TRUE) %>%
   rename(associated_gene = closest_tss) %>%
   select(chr, start, end, tissue_specificity, associated_gene, methylated_allele, hanna)
@@ -348,11 +370,29 @@ hamada_merge <- hamada %>%
   mutate(chr = str_extract(chromosome, '(?<=chr).*') %>% factor(levels = c(1:22, 'X')),
          hamada = TRUE,
          tissue_specificity = 'placental-specific',
-         methylated_allele = if_else(mean_m_percent > mean_p_percent, 'M', 'P')) %>%
+         methylated_allele = if_else(mean_m_percent > mean_p_percent, 'M', 'P'),
+         gene = if_else(gene == '-', NA_character_, gene)) %>%
   rename(associated_gene = gene) %>%
   select(chr, start, end, tissue_specificity, associated_gene, methylated_allele, hamada)
 
 hamada_merge
+```
+
+### Zink
+
+```{r}
+zink_s1$chr %>% table
+
+zink_merge <- zink_s1 %>%
+  mutate(chr = str_extract(chr, '(?<=chr).*') %>% factor(levels = c(1:22, 'X')),
+         zink = TRUE,
+         tissue_specificity = 'other',
+         methylated_allele = if_else(avg_mfrac > avg_pfrac, 'M', 'P')) %>%
+  rowwise() %>%
+  mutate(associated_gene = paste0(unique(na.omit(c(GeneSymbolCourt, GeneSymbolJoshi))), collapse = '/'),
+         associated_gene = if_else(associated_gene == "", NA_character_, associated_gene)) %>%
+  ungroup() %>%
+  select(chr, start, end, tissue_specificity, associated_gene, methylated_allele, zink)  ;zink_merge
 ```
 
 ## Joins
@@ -372,9 +412,10 @@ merged_court_hanna <- court_merge %>%
   
   # harmonize columns 
   rowwise() %>%
-  mutate(chr = na.omit(c(chr.x, chr.y)) %>% unique() %>% paste(collapse = ' '),
-         end = max(end.x, end.y),
-         start = min(start.x, start.y),
+  mutate(chr = na.omit(c(chr.x, chr.y)) %>% unique() %>% paste(collapse = ' ') %>%
+           factor(levels = c(1:22, 'X')),
+         end = max(end.x, end.y, na.rm = TRUE),
+         start = min(start.x, start.y, na.rm = TRUE),
          
          # manually check that these new columns have only a single entry
          methylated_allele = na.omit(c(methylated_allele.x, methylated_allele.y)) %>% 
@@ -399,8 +440,177 @@ merged_court_hanna <- court_merge %>%
   
   ungroup() %>%
   select(-contains('.x'), -contains('.y')) %>%
-  select(chr:associated_gene, everything()) 
+  select(chr:associated_gene, everything()) %>%
+  arrange(chr, start, end)
   
+## merge overlapping regions
+# First show the overlapping regions
+merged_court_hanna %>% 
+  arrange(chr, start) %>%
+  group_by(chr) %>%
+  
+  # identify overlapping ranges
+  mutate(previous_end = cummax(lag(end, default = 0)), # get the previous row's end or the cummax
+         new_group = (start >= previous_end),
+         group = cumsum(new_group))  %>% 
+  
+  # filter to when there are overlapping regions
+  group_by(chr, group) %>% filter(n() > 1) %>% select(chr, end, start, previous_end)
 
-
+# merge
+merged_court_hanna <- merged_court_hanna %>% 
+  arrange(chr, start) %>%
+  group_by(chr) %>%
+  
+  # identify overlapping ranges
+  mutate(previous_end = cummax(lag(end, default = 0)), # get the previous row's end or the cummax
+         new_group = (start >= previous_end),
+         group = cumsum(new_group))  %>% 
+  
+  # merge overlapping regions
+  group_by(chr, group) %>%
+  summarize(start = min(start),
+            end = max(end),
+            
+            # keep other columns the same
+            methylated_allele = paste0(unique(methylated_allele), collapse = ','),
+            tissue_specificity = paste0(unique(tissue_specificity), collapse = ','),
+            associated_gene = paste0(unique(associated_gene), collapse = ','),
+            court = paste0(unique(court), collapse = ','),
+            hanna = paste0(unique(hanna), collapse = ',')) %>%
+  ungroup() %>%
+  mutate(court = if_else(is.na(court), NA, as.logical(court)),
+         hanna = if_else(is.na(hanna), NA, as.logical(hanna))) %>% 
+  select(-group) 
 ```
+
+There were 2 regions with overlapping regions that I ended up merging. This was easy this time since all the other columns were the same. It could get complicated if two overlapping regions have different information. We will see in the next joins if that occurs.
+
+```{r}
+merged_court_hanna_sandel <- merged_court_hanna %>%
+  genome_full_join(sandel_merge, by = c('chr', 'start', 'end'))  %>%
+  
+  # harmonize columns 
+  rowwise() %>%
+  mutate(chr = na.omit(c(chr.x, chr.y)) %>% unique() %>% paste(collapse = ' ') %>%
+           factor(levels = c(1:22, 'X')),
+         end = max(end.x, end.y, na.rm = TRUE),
+         start = min(start.x, start.y, na.rm = TRUE),
+         
+         # manually check that these new columns have only a single entry
+         methylated_allele = na.omit(c(methylated_allele.x, methylated_allele.y)) %>% 
+           unique() %>% paste(collapse = ' '),
+         tissue_specificity = na.omit(c(tissue_specificity.x, tissue_specificity.y)) %>% 
+           unique() %>% paste(collapse = ' '),
+         
+         associated_gene = na.omit(c(associated_gene.x, associated_gene.y)) %>% 
+           unique() %>% paste(collapse = '/'),
+         associated_gene = if_else(associated_gene == 'NA', NA_character_, associated_gene)) %>%
+  
+  ungroup() %>%
+  select(-contains('.x'), -contains('.y')) %>%
+  select(chr:associated_gene, everything()) %>%
+  arrange(chr, start, end)
+
+#  show the overlapping regions
+merged_court_hanna_sandel %>% 
+  arrange(chr, start) %>%
+  group_by(chr) %>%
+  mutate(previous_end = cummax(lag(end, default = 0)),
+         new_group = (start >= previous_end),
+         group = cumsum(new_group))  %>% 
+  group_by(chr, group) %>% filter(n() > 1) %>% select(chr, end, start, previous_end)
+# 0
+```
+
+No overlapping regions when merging with sanchez-delgado
+
+### Add zink
+
+```{r}
+merged_court_hanna_sandel_zink <- merged_court_hanna_sandel %>% 
+  genome_full_join(zink_merge, by = c('chr', 'start', 'end')) %>%
+  
+  # harmonize columns 
+  rowwise() %>%
+  mutate(chr = na.omit(c(chr.x, chr.y)) %>% unique() %>% paste(collapse = ' ') %>%
+           factor(levels = c(1:22, 'X')),
+         end = max(end.x, end.y, na.rm = TRUE),
+         start = min(start.x, start.y, na.rm = TRUE),
+         
+         # manually check that these new columns have only a single entry
+         methylated_allele = na.omit(c(methylated_allele.x, methylated_allele.y)) %>% 
+           unique() %>% paste(collapse = ' '),
+         note = if_else(start.x == 23931451 & end.x == 23932759, 
+                        'Conflicting evidence for methylated allele:\nCourt says mat, Zink says pat, Okae sperm vs oocyte methylation indicates pat.', NA_character_),
+         
+         tissue_specificity = na.omit(c(tissue_specificity.x, tissue_specificity.y)) %>% 
+           unique() %>% paste(collapse = ' '),
+         
+         associated_gene = na.omit(c(associated_gene.x, associated_gene.y)) %>% 
+           unique() %>% paste(collapse = '/'),
+         
+         associated_gene = if_else(associated_gene == '', NA_character_, associated_gene))%>%
+  
+  ungroup() %>%
+  mutate(methylated_allele = if_else(methylated_allele == 'M P',
+                                     'P', 
+                                     methylated_allele)) %>%
+
+  select(-contains('.x'), -contains('.y')) %>%
+  select(chr:associated_gene, everything()) %>%
+  arrange(chr, start, end)
+```
+
+These regions have conflicting info for the methylated allele:
+
+Pat 2393 1257 - 2393 3138 Zink
+Mat 2393 1451 - 2393 2759 Court
+
+However, in the Okae sperm/oocyte data, sperm is 90% methylated and oocyte is 10%, which suggests that this is paternal.
+
+For now I call it paternal, and added a note
+
+```{r}
+# show the overlapping regions
+merged_court_hanna_sandel_zink %>% 
+  arrange(chr, start) %>%
+  group_by(chr) %>%
+  mutate(previous_end = cummax(lag(end, default = 0)), 
+         new_group = (start >= previous_end),
+         group = cumsum(new_group))  %>% 
+  group_by(chr, group) %>% filter(n() > 1) %>% select(chr, end, start, previous_end)
+
+# no overlaps
+```
+
+### add Hamada
+
+Here I add hamadas regions. Note that none of the verified regions were indicated in the supplemental tables. So instead of adding all of the regions, I indicate if an existing region overlaps with Hamadas. For this reason, I needed to add Hamadas regions last.
+
+For this, if there is a match, I ignore the coordinates and other information from HAmada's data. The only thing I add is the column "Hamada" indicating if this region was detected as a candidate imprint by hamada et al.
+
+```{r}
+merged_all <- merged_court_hanna_sandel_zink %>% 
+  genome_left_join(hamada_merge %>% select(chr:end, hamada), by = c('chr', 'start', 'end')) %>%
+  
+  # harmonize columns 
+  rowwise() %>%
+  mutate(chr = chr.x,
+         end = end.x,
+         start = start.x) %>%
+
+  ungroup() %>%
+  select(-contains('.x'), -contains('.y')) %>%
+  select(chr, start, end, methylated_allele, tissue_specificity:hamada, note, everything()) %>%
+  arrange(chr, start, end)
+```
+
+# Save 
+
+```{r eval = F}
+merged_all %>%
+  write_tsv(here::here('processed', 'all_imprinted_dmrs.tsv'),
+            na = '')
+```
+
