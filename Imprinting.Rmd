@@ -315,6 +315,8 @@ hanna_final$placental_specific %>% table
 hanna_final_merge <- hanna_final %>%
   separate(chr_start_end, c('chr', 'start', 'end')) %>%
   mutate(chr = str_extract(chr, '(?<=chr).*') %>% factor(levels = c(1:22, 'X')),
+         start = as.numeric(start),
+         end = as.numeric(end),
          tissue_specificity = if_else(placental_specific, 'placental-specific', 'ubiquitous'),
          hanna = TRUE) %>%
   rename(associated_gene = closest_tss) %>%
@@ -357,7 +359,48 @@ hamada_merge
 
 Now that all tables have harmonized data, we can begin merging.
 
+Note that a decision needs to be made to choose the start and end coordinates of overlapping DMRs. I opted for the "union", which is the outer most coordinates of overlapping regions.
+
+Throughout all the joins, I did this:
+
+- Manually determine which gene symbol to take. 
+- Manually determine if any conflicting evidence for the methylated allele and tissue specificity.
+
 ```{r}
+merged_court_hanna <- court_merge %>%
+  genome_full_join(hanna_final_merge, by = c('chr', 'start', 'end')) %>%
   
+  # harmonize columns 
+  rowwise() %>%
+  mutate(chr = na.omit(c(chr.x, chr.y)) %>% unique() %>% paste(collapse = ' '),
+         end = max(end.x, end.y),
+         start = min(start.x, start.y),
+         
+         # manually check that these new columns have only a single entry
+         methylated_allele = na.omit(c(methylated_allele.x, methylated_allele.y)) %>% 
+           unique() %>% paste(collapse = ' '),
+         tissue_specificity = na.omit(c(tissue_specificity.x, tissue_specificity.y)) %>% 
+           unique() %>% paste(collapse = ' '),
+         
+         # manually determine the associated gene
+         associated_gene = case_when(
+           associated_gene.x == 'DIRAS3' ~ 'DIRAS3',
+           associated_gene.x == 'H19' ~ 'H19',
+           associated_gene.x == 'SNURF' ~ 'SNURF/SNRPN',
+           associated_gene.x == 'ZNF597/NAA60' ~ 'ZNF597/NAA60',
+           associated_gene.x == 'MCTS2P/HM13' ~ 'MCTS2P/HM13',
+           associated_gene.x == 'BLCAP/NNAT' ~ 'BLCAP/NNAT',
+           associated_gene.x == 'GNAS' ~ 'GNAS',
+           associated_gene.x == 'GNAS XL' ~ 'GNAS XL',
+           associated_gene.x == 'DIRAS3 Ex2' ~ 'DIRAS3',
+           associated_gene.x == 'FAM196A/DOCK1' ~ 'FAM196A/DOCK1',
+           TRUE ~ associated_gene.y
+         )) %>%
+  
+  ungroup() %>%
+  select(-contains('.x'), -contains('.y')) %>%
+  select(chr:associated_gene, everything()) 
+  
+
 
 ```
