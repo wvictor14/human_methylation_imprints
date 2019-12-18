@@ -1,6 +1,13 @@
 ---
 title: "Imprinting"
-output: md_document
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float:
+      collapsed: false
+    theme: spacelab
+    highlight: zenburn
 editor_options: 
   chunk_output_type: console
 ---
@@ -28,10 +35,15 @@ There are many studies that have looked at specific imprinted regions and genes.
 ## Hanna et al 2016
 
 **Genome Build:** hg19
+
 **Tissues used:** Placenta, Germ cells
+
 **Technology:** 450k Array
+
 **Approach to determine parental origin:** DMR analysis of triploid (diandric vs digynic) conceptions overlapping with DMRs between oocyte and sperm
+
 **Findings:** Imprinted regions identified for known genes. Novel imprinted regions too. Polymorphic placental-specific imprinting. Some Court et al 2014 DMRs were not reproduced, and did not show germline differences in methylation.
+
 **Number of DMRs:**  43 somatic imprinted DMRs in the placenta that overlapped to Court et al. 2014. 10 of which may be secondary DMRs (no germline differences). 101 novel maternal germline imprinted DMRs, 72 are placenta specific.
 
 At this point > 140 maternal imprinted DMRs in placenta.
@@ -67,16 +79,23 @@ Note, of 101 novel imprinted DMRs, 72 are placental specific. These are not indi
 hanna_final %>%
   write_tsv(here::here('processed', 'hanna_final.tsv'))
 ```
+
 **definition of placental-specific:** 
+
 > Seventy-two novel DMRs showed a placental-specific pattern of imprinting, defined as <25% or >75% methylation in somatic tissues and intermediately (25%–75%) methylated in placenta.
 
 Where somatic tissues are fetal brain, spinal cord, kidney, muscle, and adult blood.
 
 ## Court et al 2014
 
+**Genome Build:** hg19
+
 **Tissues:** Placenta, Normal human tissues
+
 **Technology:** WGBSEQ, 450k
+
 **Approach to determine parental origin:** UPDs and hydatidiform moles.
+
 **Findings:** Imprinted regions for all known imprinted genes. 21 novel loci.
 
 Limitation discovery in 450k CpGs (intersected with wgBSeq).
@@ -103,10 +122,15 @@ court %>%
 ## Sanchez-Delgado et al 2016
 
 **Genome build:** hg19
+
 **Tissues:** germ cells, blastocysts, placenta, various somatic tissues
+
 **Technology:** Methylseq
+
 **Approach:** Identified intermediately methylated PL regions, that are also DMRs in germ cells. Validated with allele-specific assays in 11% of 551 identified regions.
+
 **Findings:** Sometimes imprinted DMRs  do not result in imprinted expression, confirm derived imprinted methylation is maternal/pat with usage of germ cells methylation data.
+
 **Number of DMRs:** Verified Hanna and Court 150 maternally methylated placental-specific DMRs (previously idetnfieid). 551 additional novel DMRs candidates. Only 11% were verified to be monoallelically methylated (all maternal).
 
 Table S2 has a list of regions. They list all candidate 551 maternal gDMRs. 11% of these were confirmed to be mono-allelic methylated. These are not indicated in table S2, but are indicated in table S3. I need table S2 for coordinates of the DMRs.
@@ -193,9 +217,13 @@ sandel %>%
 ## Hamada 2016 
 
 **Genome Build:** hg19
+
 **Tissues:** Placenta, Cytotrophoblasts, germ cells, blood, stromal from CV
+
 **Technology:** WGBSEQ, RNAseq
+
 **Approach:** Determine allele-specific meth/rna via sequencing in Cyto. Supported by germ cell DMR analysis.
+
 **Findings:** 440 confirmed maternally methylated primary imprinted DMRs (mDMRs). Out of 101 mDMRs that Courtney identified, 31 were tested in this study, and 25 of those were confirmed. An advantage of this study over previous is they used entirely wgBSEQ -> they suggest there are around 1800 imprinted DMRs based on their results.
 
 Limitation is discovery was an N of 1. (Candidates were followed up with more samples in a targeted approach). Suggests a proportion of DMRs are not placental-specific.
@@ -245,8 +273,91 @@ hamada %>%
 | DMR | Sometimes imprinted regions characterized by allele-specific methylation are referred to as differentially methylated regions (DMR), where differential methylation refers to the opposite methylation states of the parental alleles | mDMR | maternally methylated DMR. An Imprinted region where the maternal allele is methylated. Most placental imprints have the maternal allele methylated. |
 
 
-# Merge
+# Merge all
+
+Here I combine all lists of DMRs
+
+To do this we need to harmonize several columns. These are the columns we can have for the final table:
+
+| description | column name|
+| :--- | ---:|
+|position (chr, start, end)| chr, start, end|
+|ubiquitous vs placental-specific| tissue_specificity|
+|associated gene (or closest TSS)| associated_gene|
+|methylated allele (mat/pat)| methylated_allele|
+|supporting references| supporting_refs|
+
+## Harmonize data
+
+### Court
 
 ```{r}
+court$type %>% table
+court$methylated_allele %>% table
+court$chr %>% table
+
+court_merge <- court %>%
+  rename(tissue_specificity = type,
+         associated_gene = gene_locus) %>%
+  mutate(court = TRUE,
+         chr = chr %>% factor(levels = c(1:22, 'X'))) %>%
+  select(chr, start, end, tissue_specificity, associated_gene, methylated_allele, court)
+
+court_merge
+```
+
+### Hanna
+
+```{r}
+hanna_final$methylated_allele %>% table
+hanna_final$placental_specific %>% table
+
+hanna_final_merge <- hanna_final %>%
+  separate(chr_start_end, c('chr', 'start', 'end')) %>%
+  mutate(chr = str_extract(chr, '(?<=chr).*') %>% factor(levels = c(1:22, 'X')),
+         tissue_specificity = if_else(placental_specific, 'placental-specific', 'ubiquitous'),
+         hanna = TRUE) %>%
+  rename(associated_gene = closest_tss) %>%
+  select(chr, start, end, tissue_specificity, associated_gene, methylated_allele, hanna)
+hanna_final_merge
+```
+
+### Sanchez-Delgado
+
+```{r}
+sandel$chr %>% table
+sandel$methylated_allele %>% table
+
+sandel_merge <- sandel %>%
+  mutate(chr = str_extract(chr, '(?<=chr).*') %>% factor(levels = c(1:22, 'X')),
+         methylated_allele = toupper(methylated_allele),
+         sanchez_delgado = TRUE,
+         tissue_specificity = 'placental-specific') %>%
+  rename(associated_gene = gene)%>%
+  select(chr, start, end, tissue_specificity, associated_gene, methylated_allele, sanchez_delgado)
+sandel_merge
+```
+
+### Hamada
+
+```{r}
+hamada$chromosome %>% table
+hamada_merge <- hamada %>%
+  mutate(chr = str_extract(chromosome, '(?<=chr).*') %>% factor(levels = c(1:22, 'X')),
+         hamada = TRUE,
+         tissue_specificity = 'placental-specific',
+         methylated_allele = if_else(mean_m_percent > mean_p_percent, 'M', 'P')) %>%
+  rename(associated_gene = gene) %>%
+  select(chr, start, end, tissue_specificity, associated_gene, methylated_allele, hamada)
+
+hamada_merge
+```
+
+## Joins
+
+Now that all tables have harmonized data, we can begin merging.
+
+```{r}
+  
 
 ```
