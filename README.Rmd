@@ -1,0 +1,39 @@
+---
+title: "Imprinting"
+author: "Victor Yuan"
+date: "19/12/2019"
+output: 
+  md_document
+editor_options: 
+  chunk_output_type: console
+---
+
+This is a combined resource of 5 publications that looked at human imprinting:
+
+|Publication| Tissue-specificity|
+|---|---|
+| Court et al. 2014| Placental + Other|
+| Hanna et al. 2016| Placental + Other|
+| Sanchez-Delgado et al. 2016| Placental|
+| Hamada et al. 2016| Placental|
+| Zink et al. 2018| Other|
+
+These regions can be found in @ `processed/all_imprinted_dmrs.tsv`
+
+Here is a view of the first 6 rows:
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(inspectdf)
+library(kableExtra)
+dmrs <- read_tsv(here::here('processed', 'all_imprinted_dmrs.tsv'))
+head(dmrs) %>% kable() 
+```
+
+There are in total 418 imprinted regions, which can be divided into those that are specific to the placenta, and those that have been observed in other tissues.
+
+```{r}
+dmrs %>%
+  count(tissue_specificity)
+```
+
