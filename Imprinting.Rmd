@@ -24,6 +24,7 @@ Here, I try to compile the evidence for all detected human imprinted regions. My
 For each publication, I had to do some extra work to obtain the necessary information on the imprinted regions. I describe this extra processing in each section. I had to do things like: figure out which regions were confirmed to be allelically-methylated, figure out which are placental-specific or not.
 
 ```{r message = FALSE, warning = FALSE, include = FALSE}
+library(rtracklayer) 
 library(tidyverse)
 library(readxl)
 library(fuzzyjoin)
@@ -76,10 +77,6 @@ hanna_final[hanna_final == 'NA'] <- NA
 
 Note, of 101 novel imprinted DMRs, 72 are placental specific. These are not indicated in s2, but were used for the DAVID analysis  in s6. Also, coordinates from s6 do not correspond exactly to s2. In most cases, there are a couple 100 bp differences maximum. I'm not sure exactly but I suspect that s6 is the coordinates of the main isoform/transcript instead of the DMR. I use all coordinates from s2. 
 
-```{r eval = F}
-hanna_final %>%
-  write_tsv(here::here('processed', 'hanna_final.tsv'))
-```
 
 **definition of placental-specific:** 
 
@@ -113,11 +110,6 @@ court <- court_ubi %>% mutate(type = 'other') %>%
   select(chr, start, finish, type, known_dmr, known_imprinting_loci, everything()) %>%
   dplyr::rename(end = finish, number_450k_probes = number_infinium_probes, 
                 methylated_allele = methylation_origin)
-```
-
-```{r eval = F}
-court %>%
-  write_tsv(here::here('processed', 'court_final.tsv'))
 ```
 
 ## Sanchez-Delgado et al 2016
@@ -205,14 +197,9 @@ sandel <- sandel_candidates %>%
   select(-Gene.x) %>%
   
   janitor::clean_names() %>%
-  rename(chr = chromosome, cpg_island = cp_g_island, cpg_n =cp_gn)
+  dplyr::rename(chr = chromosome, cpg_island = cp_g_island, cpg_n =cp_gn)
 
 sandel
-```
-
-```{r eval = F}
-sandel %>%
-  write_tsv(here::here('processed', 'sanchez_delgado_final.tsv'))
 ```
 
 ## Hamada 2016 
@@ -266,12 +253,6 @@ hamada
 
 Note that these are just candidate impritned regions because they show > 30% difference between oocyte and sperm. **The 440 regions that were validated using ASM assays are not indicated in any supplemental tables!** Therefore I cannot use this reference to add novel imprinted regions. However, what I can do is add an indicator if one of these candidate regions overlaps another source's regions, which would be supportive evidence for that DMR.
 
-
-```{r eval = F}
-hamada %>%
-  write_tsv(here::here('processed', 'hamada_final.tsv'))
-```
-
 ## Zink et al 2018
 
 **Genome build:** hg38
@@ -285,6 +266,22 @@ hamada %>%
 ```{r}
 zink_s1 <- read_excel(here::here('raw files', 'Zink 2018.xlsx'), sheet = 2, skip = 2) %>%
   dplyr::rename(chr = Chrom, start = peakStart, end = peakEnd)
+
+# convert to hg19
+
+# load chain file
+path <- system.file(package="liftOver", "extdata", "hg38ToHg19.over.chain")
+ch <- import.chain(path)
+ch
+
+# coerce to granges object
+zink_s1_hg19 <- zink_s1 %>%
+  makeGRangesFromDataFrame(keep.extra.columns = T)
+seqlevelsStyle(zink_s1_hg19) <- 'UCSC'
+
+# hg19 to hg38 coordinates
+zink_s1_hg19 <- liftOver(zink_s1_hg19, ch) %>% unlist %>% as_tibble
+zink_s1_hg19
 ```
 
 This table looks fine to leave as is
@@ -320,7 +317,7 @@ court$methylated_allele %>% table
 court$chr %>% table
 
 court_merge <- court %>%
-  rename(tissue_specificity = type,
+  dplyr::rename(tissue_specificity = type,
          associated_gene = gene_locus) %>%
   mutate(court = TRUE,
          chr = chr %>% factor(levels = c(1:22, 'X'))) %>%
@@ -605,11 +602,26 @@ merged_all <- merged_court_hanna_sandel_zink %>%
   select(-contains('.x'), -contains('.y')) %>%
   select(chr, start, end, methylated_allele, tissue_specificity:hamada, note, everything()) %>%
   arrange(chr, start, end)
+
+merged_all %>% count(tissue_specificity)
 ```
 
 # Save 
 
 ```{r eval = F}
+# save processed versions of each source
+hanna_final %>%
+  write_tsv(here::here('processed', 'hanna_final.tsv'))
+court %>%
+  write_tsv(here::here('processed', 'court_final.tsv'))
+sandel %>%
+  write_tsv(here::here('processed', 'sanchez_delgado_final.tsv'))
+hamada %>%
+  write_tsv(here::here('processed', 'hamada_final.tsv'))
+zink_s1_hg19 %>%
+  write_tsv(here::here('processed', 'zink_hg19.tsv'))
+
+# save final merged version
 merged_all %>%
   write_tsv(here::here('processed', 'all_imprinted_dmrs.tsv'),
             na = '')

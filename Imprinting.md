@@ -127,11 +127,6 @@ hanna_final[hanna_final == 'NA'] <- NA
 Note, of 101 novel imprinted DMRs, 72 are placental specific. These are not indicated in s2, but were used for the DAVID analysis  in s6. Also, coordinates from s6 do not correspond exactly to s2. In most cases, there are a couple 100 bp differences maximum. I'm not sure exactly but I suspect that s6 is the coordinates of the main isoform/transcript instead of the DMR. I use all coordinates from s2. 
 
 
-```r
-hanna_final %>%
-  write_tsv(here::here('processed', 'hanna_final.tsv'))
-```
-
 **definition of placental-specific:** 
 
 > Seventy-two novel DMRs showed a placental-specific pattern of imprinting, defined as <25% or >75% methylation in somatic tissues and intermediately (25%–75%) methylated in placenta.
@@ -165,12 +160,6 @@ court <- court_ubi %>% mutate(type = 'other') %>%
   select(chr, start, finish, type, known_dmr, known_imprinting_loci, everything()) %>%
   dplyr::rename(end = finish, number_450k_probes = number_infinium_probes, 
                 methylated_allele = methylation_origin)
-```
-
-
-```r
-court %>%
-  write_tsv(here::here('processed', 'court_final.tsv'))
 ```
 
 ## Sanchez-Delgado et al 2016
@@ -321,7 +310,7 @@ sandel <- sandel_candidates %>%
   select(-Gene.x) %>%
   
   janitor::clean_names() %>%
-  rename(chr = chromosome, cpg_island = cp_g_island, cpg_n =cp_gn)
+  dplyr::rename(chr = chromosome, cpg_island = cp_g_island, cpg_n =cp_gn)
 
 sandel
 ```
@@ -348,12 +337,6 @@ sandel
 ## 16 CACN~ chr22 4.01e7 4.01e7  3728 yes          198 Gene_bo~ M               
 ## # ... with 2 more variables: percent_biallelic <dbl>,
 ## #   n_used_to_verify_allele_specific_methylation <dbl>
-```
-
-
-```r
-sandel %>%
-  write_tsv(here::here('processed', 'sanchez_delgado_final.tsv'))
 ```
 
 ## Hamada 2016 
@@ -451,13 +434,6 @@ hamada
 
 Note that these are just candidate impritned regions because they show > 30% difference between oocyte and sperm. **The 440 regions that were validated using ASM assays are not indicated in any supplemental tables!** Therefore I cannot use this reference to add novel imprinted regions. However, what I can do is add an indicator if one of these candidate regions overlaps another source's regions, which would be supportive evidence for that DMR.
 
-
-
-```r
-hamada %>%
-  write_tsv(here::here('processed', 'hamada_final.tsv'))
-```
-
 ## Zink et al 2018
 
 **Genome build:** hg38
@@ -472,6 +448,53 @@ hamada %>%
 ```r
 zink_s1 <- read_excel(here::here('raw files', 'Zink 2018.xlsx'), sheet = 2, skip = 2) %>%
   dplyr::rename(chr = Chrom, start = peakStart, end = peakEnd)
+
+# convert to hg19
+
+# load chain file
+path <- system.file(package="liftOver", "extdata", "hg38ToHg19.over.chain")
+ch <- import.chain(path)
+ch
+```
+
+```
+## Chain of length 25
+## names(25): chr22 chr21 chr19 chr20 chrY chr18 ... chr6 chr5 chr4 chr3 chr2 chr1
+```
+
+```r
+# coerce to granges object
+zink_s1_hg19 <- zink_s1 %>%
+  makeGRangesFromDataFrame(keep.extra.columns = T)
+seqlevelsStyle(zink_s1_hg19) <- 'UCSC'
+
+# hg19 to hg38 coordinates
+zink_s1_hg19 <- liftOver(zink_s1_hg19, ch) %>% unlist %>% as_tibble
+zink_s1_hg19
+```
+
+```
+## # A tibble: 229 x 36
+##    seqnames  start    end width strand  nCpG nCpG_sig methDiff avg_pfrac
+##    <fct>     <int>  <int> <int> <fct>  <dbl>    <dbl>    <dbl>     <dbl>
+##  1 chr1     7.89e6 7.89e6   571 *         33       33   -0.281    0.521 
+##  2 chr1     4.00e7 4.00e7   379 *         24       22   -0.425    0.469 
+##  3 chr1     6.85e7 6.85e7  1259 *         57       57   -0.690    0.120 
+##  4 chr1     1.77e8 1.77e8   181 *         14       14   -0.120    0.788 
+##  5 chr10    1.32e8 1.32e8   716 *         38       29   -0.151    0.517 
+##  6 chr11    2.15e6 2.16e6  1531 *         67       51    0.404    0.777 
+##  7 chr11    2.17e6 2.17e6  3472 *         82       76    0.516    0.728 
+##  8 chr11    2.72e6 2.72e6  1537 *        149      117   -0.751    0.0429
+##  9 chr11    7.11e6 7.11e6   541 *         52       49   -0.340    0.485 
+## 10 chr11    6.04e7 6.04e7   434 *         31       25   -0.207    0.660 
+## # ... with 219 more rows, and 27 more variables: avg_mfrac <dbl>, score <dbl>,
+## #   fdr <dbl>, DMRStartCourt <dbl>, DMREndCourt <dbl>, GeneSymbolCourt <chr>,
+## #   DMRStartJoshi <dbl>, DMREndJoshi <dbl>, GeneSymbolJoshi <chr>,
+## #   closestEnsemblGene <chr>, ASEGenes <chr>, KnownImprintedGenes <chr>,
+## #   pval_imp <dbl>, pval_imp_cond <dbl>, beta_snp <dbl>, beta_po <dbl>,
+## #   p_snp <dbl>, p_po <dbl>, AF <dbl>, Marker <chr>, Blastocyst <dbl>,
+## #   Oocyte <dbl>, Sperm <dbl>, delta <dbl>, pval <dbl>, npns <dbl>,
+## #   status <chr>
 ```
 
 This table looks fine to leave as is
@@ -534,7 +557,7 @@ court$chr %>% table
 
 ```r
 court_merge <- court %>%
-  rename(tissue_specificity = type,
+  dplyr::rename(tissue_specificity = type,
          associated_gene = gene_locus) %>%
   mutate(court = TRUE,
          chr = chr %>% factor(levels = c(1:22, 'X'))) %>%
@@ -1026,12 +1049,35 @@ merged_all <- merged_court_hanna_sandel_zink %>%
   select(-contains('.x'), -contains('.y')) %>%
   select(chr, start, end, methylated_allele, tissue_specificity:hamada, note, everything()) %>%
   arrange(chr, start, end)
+
+merged_all %>% count(tissue_specificity)
+```
+
+```
+## # A tibble: 2 x 2
+##   tissue_specificity     n
+##   <chr>              <int>
+## 1 other                307
+## 2 placental-specific   111
 ```
 
 # Save 
 
 
 ```r
+# save processed versions of each source
+hanna_final %>%
+  write_tsv(here::here('processed', 'hanna_final.tsv'))
+court %>%
+  write_tsv(here::here('processed', 'court_final.tsv'))
+sandel %>%
+  write_tsv(here::here('processed', 'sanchez_delgado_final.tsv'))
+hamada %>%
+  write_tsv(here::here('processed', 'hamada_final.tsv'))
+zink_s1_hg19 %>%
+  write_tsv(here::here('processed', 'zink_hg19.tsv'))
+
+# save final merged version
 merged_all %>%
   write_tsv(here::here('processed', 'all_imprinted_dmrs.tsv'),
             na = '')
