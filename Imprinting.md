@@ -1061,6 +1061,20 @@ merged_all %>% count(tissue_specificity)
 ## 2 placental-specific   111
 ```
 
+# explore
+
+
+```r
+inspect_imb(merged_all) %>% show_plot()
+```
+
+![](Imprinting_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+
+```r
+inspect_cat(merged_all) %>% show_plot()
+```
+
+![](Imprinting_files/figure-html/unnamed-chunk-19-2.png)<!-- -->
 # Save 
 
 

@@ -28,6 +28,7 @@ library(rtracklayer)
 library(tidyverse)
 library(readxl)
 library(fuzzyjoin)
+library(inspectdf)
 ```
 
 # Primary Publications
@@ -606,6 +607,12 @@ merged_all <- merged_court_hanna_sandel_zink %>%
 merged_all %>% count(tissue_specificity)
 ```
 
+# explore
+
+```{r}
+inspect_imb(merged_all) %>% show_plot()
+inspect_cat(merged_all) %>% show_plot()
+```
 # Save 
 
 ```{r eval = F}
