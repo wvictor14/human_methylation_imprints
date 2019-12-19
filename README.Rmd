@@ -3,7 +3,9 @@ title: "Imprinting"
 author: "Victor Yuan"
 date: "19/12/2019"
 output: 
-  md_document
+  md_document:
+    df_print: kable
+always_allow_html: yes
 editor_options: 
   chunk_output_type: console
 ---
@@ -27,13 +29,13 @@ library(tidyverse)
 library(inspectdf)
 library(kableExtra)
 dmrs <- read_tsv(here::here('processed', 'all_imprinted_dmrs.tsv'))
-head(dmrs) %>% kable() 
+head(dmrs) 
 ```
 
 There are in total 418 imprinted regions, which can be divided into those that are specific to the placenta, and those that have been observed in other tissues.
 
-```{r}
+```{r echo = FALSE}
 dmrs %>%
-  count(tissue_specificity)
+  count(tissue_specificity) 
 ```
 

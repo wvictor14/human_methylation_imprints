@@ -36,6 +36,8 @@ These regions can be found in @ `processed/all_imprinted_dmrs.tsv`
 
 Here is a view of the first 6 rows:
 
+<div class="kable-table">
+
 <table>
 <thead>
 <tr>
@@ -308,16 +310,42 @@ NA
 </tr>
 </tbody>
 </table>
+</div>
 
 There are in total 418 imprinted regions, which can be divided into
 those that are specific to the placenta, and those that have been
 observed in other tissues.
 
-    dmrs %>%
-      count(tissue_specificity)
+<div class="kable-table">
 
-    ## # A tibble: 2 x 2
-    ##   tissue_specificity     n
-    ##   <chr>              <int>
-    ## 1 other                307
-    ## 2 placental-specific   111
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+tissue\_specificity
+</th>
+<th style="text-align:right;">
+n
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+other
+</td>
+<td style="text-align:right;">
+307
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+placental-specific
+</td>
+<td style="text-align:right;">
+111
+</td>
+</tr>
+</tbody>
+</table>
+</div>
